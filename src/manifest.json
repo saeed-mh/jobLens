@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Job Lens",
+  "version": "0.1.0",
+  "description": "Resume and job compatibility assistant. Stage 1: extension setup.",
+  "minimum_chrome_version": "99",
+  "action": {
+    "default_title": "Job Lens",
+    "default_popup": "popup/popup.html"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}
