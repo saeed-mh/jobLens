@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "requestId": "sample-matching-001",
+  "resume": {
+    "version": "sample-resume-v1",
+    "text": "Backend engineer with five years of professional Python and SQL experience. Built REST APIs, maintained PostgreSQL databases, and deployed services on Linux. English proficiency: fluent. Seeking remote full-time work."
+  },
+  "preferences": {
+    "languages": [{ "name": "English", "proficiency": "fluent" }],
+    "acceptableCities": ["Berlin"],
+    "remoteWork": "remote",
+    "employmentTypes": ["full-time"]
+  },
+  "preferencesVersion": "sample-preferences-v1",
+  "job": {
+    "id": "123456789",
+    "title": "Backend Engineer",
+    "company": "Example Company",
+    "description": "Full-time, fully remote Backend Engineer position based in Berlin. Requirements: at least three years of professional Python and SQL experience, REST API development, PostgreSQL, and fluent English. You will build backend services, maintain databases, and collaborate with product teams."
+  },
+  "consent": { "granted": true, "noticeVersion": "job-lens-cloudflare-v1" }
+}

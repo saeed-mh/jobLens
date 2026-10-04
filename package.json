@@ -7,6 +7,9 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
+    "build:backend": "node scripts/build-backend.mjs",
+    "typecheck:backend": "tsc --project backend/tsconfig.json --noEmit",
+    "test:backend": "node scripts/build-backend.mjs && node scripts/test-backend.mjs",
     "test": "node scripts/test.mjs",
     "test:browser": "node scripts/test-browser.mjs && node scripts/test-linkedin.mjs"
   },
