@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SAMPLE_TEXT, createDocx, writeFixtures } from "./test-fixtures.mjs";
@@ -13,6 +13,7 @@ await writeFixtures(fixtures);
 await mkdir(path.join(artifacts, "profiles"), { recursive: true });
 const profile = await mkdtemp(path.join(artifacts, "profiles", "stage2-"));
 const extensionPath = path.join(root, "dist");
+const manifest = JSON.parse(await readFile(path.join(extensionPath, "manifest.json"), "utf8"));
 const context = await chromium.launchPersistentContext(profile, {
   channel: "chromium", headless: true, viewport: { width: 1200, height: 900 },
   args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
@@ -180,7 +181,7 @@ try {
   const popup = await context.newPage();
   await popup.goto(`${baseUrl}/popup/popup.html`);
   await popup.waitForFunction(() => document.getElementById("resume-status").textContent.includes("Confirmed resume"));
-  assert.equal(await popup.locator("#extension-version").textContent(), "0.2.0");
+  assert.equal(await popup.locator("#extension-version").textContent(), manifest.version);
   await popup.locator("#open-settings").click();
   console.log("PASS: popup status, settings navigation, and narrow-screen layout");
 

@@ -59,7 +59,7 @@ function syncControls(): void {
   element<HTMLParagraphElement>("consent-status").textContent = resumeIsDraft()
     ? "Confirm or discard the resume draft before saving preferences or consent."
     : saved.consent.automaticAnalysis
-      ? "Saved preference: on. Matching is not connected yet; stage 2 sends nothing."
+      ? "Saved preference: on. Matching is not connected yet; this version sends nothing."
       : "Saved preference: off. Confirm a resume first, then opt in and save if you wish.";
 }
 

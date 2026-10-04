@@ -6,12 +6,79 @@ import path from "node:path";
 import { SAMPLE_TEXT } from "./test-fixtures.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-await build({ absWorkingDir: root, entryPoints: ["src/shared/settings.ts", "src/shared/storage.ts", "src/resume/validation.ts"],
+await build({ absWorkingDir: root, entryPoints: ["src/shared/settings.ts", "src/shared/storage.ts", "src/resume/validation.ts", "src/linkedin/readiness.ts", "src/linkedin/extract.ts"],
   outbase: "src", outdir: ".test-artifacts/modules", bundle: true, platform: "node", format: "esm" });
 const load = (file) => import(pathToFileURL(path.join(root, ".test-artifacts/modules", file)).href);
 const validation = await load("resume/validation.js");
 const model = await load("shared/settings.js");
 const storage = await load("shared/storage.js");
+const { ReadinessTracker } = await load("linkedin/readiness.js");
+const { currentRoute, jobIdFromUrl } = await load("linkedin/extract.js");
+
+test("Job URL parsing handles direct postings, slugs, side panels, and excludes other hosts", () => {
+  assert.equal(jobIdFromUrl("https://www.linkedin.com/jobs/view/1234/"), "1234");
+  assert.equal(jobIdFromUrl("/jobs/view/backend-engineer-1234"), "1234");
+  assert.equal(jobIdFromUrl("https://www.linkedin.com/jobs/search/?currentJobId=5678"), "5678");
+  assert.equal(jobIdFromUrl("https://example.com/jobs/view/1234"), null);
+  assert.equal(jobIdFromUrl("https://www.linkedin.com/jobs/search/?currentJobId=invalid"), null);
+  assert.equal(currentRoute("https://www.linkedin.com/feed/").isJobsPage, false);
+});
+
+const job = () => ({ jobId: "100", domJobId: "100", title: "Backend Engineer", company: "Example",
+  description: `${SAMPLE_TEXT} Build reliable backend services and collaborate with product teams.`,
+  descriptionElement: {}, loading: false, collapsed: false });
+
+test("Job readiness requires stable text plus a title, identity, and no loading/collapse signals", () => {
+  const tracker = new ReadinessTracker(); tracker.navigate("100");
+  const input = job();
+  assert.equal(tracker.observe(input, 0).phase, "reading");
+  assert.equal(tracker.observe(input, 1199).phase, "reading");
+  assert.equal(tracker.observe(input, 1200).phase, "ready");
+  for (const changes of [{ loading: true }, { collapsed: true }, { title: "" }, { description: "Loading…" }, { jobId: null }]) {
+    assert.equal(tracker.observe({ ...input, ...changes }, 3000).phase, "waiting");
+  }
+  assert.equal(tracker.canExpand({ ...input, loading: true }), false);
+  assert.equal(tracker.observe({ ...input, description: "x".repeat(100001) }, 4000).phase, "unavailable");
+});
+
+test("Switching jobs never declares the previous description ready under the new identity", () => {
+  const tracker = new ReadinessTracker(); tracker.navigate("100");
+  const first = job(); tracker.observe(first, 0); tracker.observe(first, 1200);
+  tracker.navigate("200");
+  assert.equal(tracker.observe(first, 2000).phase, "waiting");
+  const staleDescription = { ...first, jobId: "200", domJobId: "200", title: "Data Engineer" };
+  assert.equal(tracker.observe(staleDescription, 4000).phase, "waiting");
+  assert.equal(tracker.canExpand(staleDescription), false);
+  const newJob = { ...staleDescription, description: `${first.description} New position working on analytics.` };
+  assert.equal(tracker.canExpand(newJob), true);
+  assert.equal(tracker.observe(newJob, 5000).phase, "reading");
+  assert.equal(tracker.observe(staleDescription, 5500).phase, "waiting");
+  assert.equal(tracker.observe(newJob, 6000).phase, "reading");
+  assert.equal(tracker.observe(newJob, 7200).phase, "ready");
+});
+
+test("DOM-only switches and description replacements restart the readiness checks", () => {
+  const tracker = new ReadinessTracker();
+  const first = job(); tracker.observe(first, 0); tracker.observe(first, 1200);
+  const second = { ...first, jobId: "200", domJobId: "200", title: "Data Engineer" };
+  assert.equal(tracker.observe(second, 2000).phase, "waiting");
+  const replaced = { ...second, descriptionElement: {} };
+  assert.equal(tracker.observe(replaced, 3000).phase, "reading");
+  assert.equal(tracker.observe(replaced, 4200).phase, "ready");
+  tracker.invalidate();
+  assert.equal(tracker.observe(replaced, 5000).phase, "reading");
+});
+
+test("Changing routing metadata without changing the job does not invalidate its identity", () => {
+  const tracker = new ReadinessTracker(); tracker.navigate("100");
+  const input = job(); tracker.observe(input, 0); tracker.observe(input, 1200);
+  tracker.navigate(null);
+  assert.equal(tracker.observe(input, 2000).phase, "reading");
+  assert.equal(tracker.observe(input, 3200).phase, "ready");
+  tracker.navigate("100");
+  assert.equal(tracker.observe(input, 4000).phase, "reading");
+  assert.equal(tracker.observe(input, 5200).phase, "ready");
+});
 
 test("File validation rejects unsupported, empty, oversized, and mismatched files", () => {
   const file = { name: "resume.pdf", type: "application/pdf", size: 100 };

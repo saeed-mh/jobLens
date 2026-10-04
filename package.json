@@ -1,6 +1,6 @@
 {
   "name": "job-lens",
-  "version": "0.2.0",
+  "version": "0.3.2",
   "private": true,
   "description": "A step-by-step Chrome extension for resume and job compatibility.",
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test.mjs",
-    "test:browser": "node scripts/test-browser.mjs"
+    "test:browser": "node scripts/test-browser.mjs && node scripts/test-linkedin.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

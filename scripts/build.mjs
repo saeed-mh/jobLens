@@ -24,6 +24,13 @@ await build({
 });
 
 const vendorRoot = path.join(projectRoot, "dist/vendor/pdf");
+// Manifest-declared content scripts are classic scripts, not ES modules.
+await build({
+  absWorkingDir: projectRoot, entryPoints: ["src/linkedin/content.ts"],
+  outfile: "dist/linkedin/content.js", bundle: true, platform: "browser",
+  format: "iife", target: "chrome125", legalComments: "linked", minify: false,
+});
+
 await mkdir(vendorRoot, { recursive: true });
 await copyFile(path.join(projectRoot, "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs"), path.join(vendorRoot, "pdf.worker.min.mjs"));
 for (const directory of ["cmaps", "standard_fonts"]) {
