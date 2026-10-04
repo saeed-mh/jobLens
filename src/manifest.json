@@ -1,9 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Job Lens",
-  "version": "0.1.0",
-  "description": "Resume and job compatibility assistant. Stage 1: extension setup.",
-  "minimum_chrome_version": "99",
+  "version": "0.2.0",
+  "description": "Resume and job compatibility assistant. Local resume upload and preferences.",
+  "minimum_chrome_version": "125",
+  "permissions": ["storage"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; worker-src 'self'; object-src 'none'; connect-src 'self'; base-uri 'none'"
+  },
   "action": {
     "default_title": "Job Lens",
     "default_popup": "popup/popup.html"

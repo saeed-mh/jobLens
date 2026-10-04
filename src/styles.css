@@ -85,3 +85,44 @@ button:focus-visible {
   color: #a52222;
   font-size: 13px;
 }
+
+[hidden] { display: none !important; }
+
+.settings-layout { max-width: 800px; margin: 0 auto; }
+.settings-layout > header { padding: 0 8px; }
+.settings-layout .card { max-width: none; margin: 24px 0; }
+h2 { margin: 0 0 16px; font-size: 22px; line-height: 1.4; }
+h3 { margin: 24px 0 12px; font-size: 17px; }
+fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+label { display: block; margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
+input:not([type="checkbox"]), textarea, select {
+  width: 100%; padding: 10px 12px; border: 1px solid #a8b6ca;
+  border-radius: 8px; background: #fff; color: #17243a; font: inherit;
+}
+textarea { resize: vertical; }
+#resume-preview { font-size: 14px; line-height: 1.7; }
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid #2457d6; outline-offset: 2px;
+}
+.check-row { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; }
+.check-row input { margin-top: 6px; accent-color: #2457d6; flex-shrink: 0; }
+.button-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.button-row button { flex: 1; width: auto; }
+.secondary { color: #17243a; background: #e8eef8; }
+.secondary:hover { background: #d7e2f3; }
+.danger { color: #9d1d28; background: #fff0f1; border: 1px solid #efc2c6; }
+.danger:hover { background: #ffe0e4; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.notice { padding: 12px 16px; border-left: 3px solid #2457d6; background: #eaf0ff; font-size: 14px; }
+.language-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+.language-row button { margin: 0; }
+.employment-types { margin-top: 24px; padding: 16px; border: 1px solid #dce3ee; border-radius: 8px; }
+.employment-types legend { font-size: 14px; font-weight: 600; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 560px) {
+  .options { padding: 24px 12px; }
+  .card { padding: 20px; }
+  .language-row { grid-template-columns: 1fr; gap: 4px; margin-bottom: 20px; }
+  .language-row button { margin-top: 8px; }
+  .button-row { flex-direction: column; }
+}
