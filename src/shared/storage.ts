@@ -1,4 +1,6 @@
 import { SETTINGS_KEY, parseSettings, type Settings } from "./settings.js";
+import { CACHE_KEY } from "./analysis.js";
+import { PROVIDER_TRACE_KEY } from "./provider-trace.js";
 
 export async function readSettings(): Promise<Settings> {
   await chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
@@ -18,5 +20,8 @@ export async function saveSettings(settings: Settings, expectedRevision: string)
 }
 
 export async function deleteAllSettings(): Promise<void> {
-  await navigator.locks.request("jobLens.settings", () => chrome.storage.local.remove(SETTINGS_KEY));
+  await navigator.locks.request("jobLens.settings", async () => {
+    await chrome.storage.local.remove(SETTINGS_KEY);
+    await chrome.storage.session.remove([CACHE_KEY, PROVIDER_TRACE_KEY]);
+  });
 }

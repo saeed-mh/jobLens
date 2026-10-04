@@ -11,6 +11,7 @@ export interface JobCandidate {
   title: string;
   company: string;
   description: string;
+  postingDetails: string;
   root: HTMLElement;
   descriptionElement: HTMLElement | null;
   expandButton: HTMLElement | null;
@@ -58,19 +59,67 @@ function normalize(text: string): string {
 }
 
 // Preserve paragraph/list boundaries without copying HTML or UI controls.
-export function descriptionText(element: HTMLElement, excludedElements: ReadonlySet<HTMLElement> = new Set()): string {
+function readText(element: HTMLElement, excludedElements: ReadonlySet<HTMLElement>, header = false): string {
   const blockTags = new Set(["P", "DIV", "LI", "UL", "OL", "H1", "H2", "H3", "H4", "SECTION"]);
+  let stopped = false;
   function walk(node: Node): string {
+    if (stopped) return "";
     if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
     if (!(node instanceof HTMLElement)) return "";
-    if (excludedElements.has(node) || node.matches(`script, style, button, [role="button"], nav, [hidden], [aria-hidden="true"], #${BAR_ID}`)) return "";
+    // The modern column's first detail slot ends the header. Never continue
+    // into people/company/recommendation sections, even if nested in wrappers.
+    if (header && node.matches(`${MODERN_LAYOUT.slots}, ${MODERN_LAYOUT.people}`)) { stopped = true; return ""; }
+    if (excludedElements.has(node) || node.matches(`script, style, nav, [hidden], [aria-hidden="true"], #${BAR_ID}, ${SELECTORS.excluded.join(",")}`)) return "";
     if (node.tagName === "BR") return "\n";
     const style = getComputedStyle(node);
     if (style.display === "none" || style.visibility === "hidden") return "";
+    if (node.matches('button, [role="button"]')) {
+      // LinkedIn also renders job attributes as buttons. Accept only literal
+      // attribute labels, never Apply/Save or personalized preference text.
+      const label = normalize(node.innerText).split("\n")[0];
+      return header && /^(?:hybrid|remote|on[- ]?site|vor ort|homeoffice|full[- ]?time|part[- ]?time|vollzeit|teilzeit|working student(?: \(werkstudent\))?|werkstudent|internship|praktikum|contract|freelance|temporary|apprenticeship)$/iu.test(label) ? `\n${label}\n` : "";
+    }
     const text = Array.from(node.childNodes).map(walk).join("");
     return blockTags.has(node.tagName) ? `\n${text}\n` : text;
   }
   return normalize(walk(element));
+}
+
+export function descriptionText(element: HTMLElement, excludedElements: ReadonlySet<HTMLElement> = new Set()): string {
+  return readText(element, excludedElements);
+}
+
+function classicPostingDetails(root: HTMLElement, description: HTMLElement | null): string {
+  const elements = Array.from(root.querySelectorAll<HTMLElement>(SELECTORS.headerDetails.join(",")))
+    .filter(element => allowed(element) && !description?.contains(element))
+    .filter((element, _, all) => !all.some(other => other !== element && other.contains(element)));
+  return [...new Set(elements.map(element => readText(element, new Set(), true)).filter(Boolean))].join("\n");
+}
+
+export function cleanPostingDetails(text: string, title: string): string {
+  const seen = new Set<string>(), details: string[] = [];
+  for (const source of normalize(text).split("\n")) {
+    let line = source.trim();
+    if (!line || line.toLocaleLowerCase() === normalize(title).toLocaleLowerCase()
+      || /^(?:apply|save|saved|bewerben|speichern)$/iu.test(line)
+      || /^(?:promoted by hirer|responses managed off linkedin|get ai-powered advice|see how you compare|access exclusive applicant insights|reactivate premium|determine your fit|show match details|tailor my resume|help me stand out)\b/iu.test(line)) continue;
+    // These separators belong to LinkedIn's company/location and posting-time
+    // rows. Keep the displayed location, without applicant counts or timestamps.
+    const inlineLocation = line.split(/\s+•\s+/).at(-1)!;
+    if (inlineLocation.includes(",")) line = inlineLocation;
+    line = line.split(/\s+·\s+/)[0].trim();
+    const key = line.toLocaleLowerCase();
+    if (line && !seen.has(key)) { seen.add(key); details.push(line); }
+  }
+  return details.join("\n");
+}
+
+// The preview and API use exactly the same text. Keep the body separate in the
+// readiness tracker: a new header cannot establish that the body has changed.
+export function jobText(candidate: Pick<JobCandidate, "description" | "postingDetails">): string {
+  return candidate.postingDetails
+    ? `LinkedIn posting details:\n${candidate.postingDetails}\n\nAbout the job:\n${candidate.description}`
+    : candidate.description;
 }
 
 function scopedJobId(root: HTMLElement, title: HTMLElement | null): string | null {
@@ -147,7 +196,8 @@ function modernCandidates(): JobCandidate[] {
         && (["hidden", "clip"].includes(style.overflowY) || Boolean(lineClamp && lineClamp !== "none"));
     });
     candidates.push({ jobId: domJobId, domJobId, title: normalize(title?.innerText ?? ""), company: "",
-      description: descriptionText(section, excluded), root, descriptionElement: section,
+      description: descriptionText(section, excluded),
+      postingDetails: title ? cleanPostingDetails(readText(root, new Set([title]), true), title.innerText) : "", root, descriptionElement: section,
       expandButton: expand, collapsed: nestedClipping || descriptionIsClipped(section, root),
       loading: Boolean(root.closest('[aria-busy="true"]')) || Boolean(first(root, SELECTORS.loading)),
     });
@@ -191,6 +241,7 @@ export function findCurrentJob(route: JobRoute): JobCandidate | null {
       title: normalize(titleElement?.innerText ?? ""),
       company: normalize(first(root, SELECTORS.companies)?.innerText ?? ""),
       description: descriptionElement ? descriptionText(descriptionElement) : "",
+      postingDetails: cleanPostingDetails(classicPostingDetails(root, descriptionElement), titleElement?.innerText ?? ""),
       root, descriptionElement, expandButton: expandButton(root),
       collapsed: descriptionIsClipped(descriptionElement, root),
       loading: Boolean(root.closest('[aria-busy="true"]')) || Boolean(first(root, SELECTORS.loading)),
@@ -203,7 +254,7 @@ export function findCurrentJob(route: JobRoute): JobCandidate | null {
   const best = eligible.find((candidate) => candidate.title && candidate.descriptionElement) ?? eligible[0];
   if (!best) return null;
   const ambiguous = eligible.some((candidate) => candidate !== best
-    && (candidate.jobId !== best.jobId || candidate.title !== best.title || candidate.description !== best.description)
+    && (candidate.jobId !== best.jobId || candidate.title !== best.title || candidate.description !== best.description || candidate.postingDetails !== best.postingDetails)
     && !best.root.contains(candidate.root) && !candidate.root.contains(best.root));
   return ambiguous ? null : best;
 }

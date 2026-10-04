@@ -18,8 +18,8 @@ async function updateStatus(): Promise<void> {
     const settings = await readSettings();
     resumeStatus.textContent = settings.resume ? "Confirmed resume saved on this device." : "Upload and confirm your resume in settings.";
     analysisStatus.textContent = settings.consent.automaticAnalysis
-      ? "Automatic analysis preference: on. Matching is not connected yet."
-      : "Automatic analysis preference: off. Matching is not connected yet.";
+      ? "Automatic AI matching is on. Open a LinkedIn job to see the result."
+      : "Automatic AI matching is off. Configure your API key and consent in settings.";
   } catch { resumeStatus.textContent = "Could not read settings. Open settings to retry or reset saved data."; }
 }
 

@@ -1,8 +1,9 @@
-import { API_VERSION, ASSESSMENT_VERSION, BUILD_ID, MODEL, MAX_BODY_BYTES, ApiError, parseRequest, modelInput, parseModelOutput } from "./contract.js";
+import { API_VERSION, ASSESSMENT_VERSION, BUILD_ID, MODEL, MAX_BODY_BYTES, ApiError, parseRequest, modelInputs, parseModelOutput } from "./contract.js";
 import { withTimeout } from "./deadline.js";
+import { SCORING_VERSION, RUBRIC_VERSION, scoreAssessments } from "../../src/shared/analysis.js";
 
 export interface Env {
-  AI: { run(model: string, input: ReturnType<typeof modelInput>): Promise<unknown> };
+  AI: { run(model: string, input: ReturnType<typeof modelInputs>["professional"] | ReturnType<typeof modelInputs>["work"]): Promise<unknown> };
   JOB_LENS_API_TOKEN: string;
   // Wrangler config enables this. Dashboard-only personal tests may omit it.
   ANALYSIS_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
@@ -71,7 +72,7 @@ export default {
     const path = new URL(request.url).pathname;
     if (path === "/" || path === "/health") {
       if (request.method !== "GET") return json({ error: { code: "method_not_allowed", message: "Use GET." } }, 405, { Allow: "GET" });
-      return json({ status: "ok", service: "Job Lens", apiVersion: API_VERSION, assessmentVersion: ASSESSMENT_VERSION, buildId: BUILD_ID });
+      return json({ status: "ok", service: "Job Lens", apiVersion: API_VERSION, assessmentVersion: ASSESSMENT_VERSION, scoringVersion: SCORING_VERSION, rubricVersion: RUBRIC_VERSION, buildId: BUILD_ID });
     }
     if (path !== "/analyze") return json({ error: { code: "not_found", message: "Route not found." } }, 404);
     if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "Use POST." } }, 405, { Allow: "POST" });
@@ -84,20 +85,33 @@ export default {
         throw new ApiError(401, "unauthorized", "A valid personal testing API token is required.");
       }
       const input = parseRequest(await readJson(request));
-      const payload = modelInput(input);
+      const payloads = modelInputs(input);
       if (env.ANALYSIS_RATE_LIMITER) {
         const result = await env.ANALYSIS_RATE_LIMITER.limit({ key: "job-lens-personal-analyze-v1" });
         if (!result.success) throw new ApiError(429, "rate_limited", "Too many analyses. Wait a minute before trying again.");
       }
       // A response deadline cannot cancel an inference already accepted by Workers AI.
-      const raw = await withTimeout(env.AI.run(MODEL, payload), MODEL_TIMEOUT_MS,
+      const started = performance.now();
+      const [raw, workRaw] = await withTimeout(Promise.all([
+        env.AI.run(MODEL, payloads.professional), env.AI.run(MODEL, payloads.work),
+      ]), MODEL_TIMEOUT_MS,
         new ApiError(504, "ai_timeout", "The model took too long to respond. Try again later."));
-      const result = parseModelOutput(raw);
+      const professional = parseModelOutput(raw, input), work = parseModelOutput(workRaw, input);
+      // Only answers requested in each call can contribute to the result.
+      const result = { assessments: { skills: professional.assessments.skills, experience: professional.assessments.experience,
+        language: professional.assessments.language, location: work.assessments.location, employment: work.assessments.employment },
+        usage: { inputTokens: professional.usage.inputTokens + work.usage.inputTokens,
+          outputTokens: professional.usage.outputTokens + work.usage.outputTokens } };
       return json({
         apiVersion: API_VERSION, assessmentVersion: ASSESSMENT_VERSION, buildId: BUILD_ID, model: MODEL,
         requestId: input.requestId, jobId: input.job.id,
         resumeVersion: input.resume.version, preferencesVersion: input.preferencesVersion,
-        ...result,
+        ...result, scoringVersion: SCORING_VERSION, rubricVersion: RUBRIC_VERSION, score: scoreAssessments(result.assessments), durationMs: Math.round(performance.now() - started),
+        // Explicit authenticated debugging only. No tokens, headers, errors, logs,
+        // or retained traces; the normal extension never requests this report.
+        ...(request.headers.get("X-Job-Lens-Debug") === "requirements-v1"
+          ? { debug: { format: "job-lens-provider-trace-v2", request: payloads.professional, rawResponse: raw,
+            work: { request: payloads.work, rawResponse: workRaw } } } : {}),
       });
     } catch (error) {
       // Provider errors can contain input text or infrastructure details. Do not echo/log them.

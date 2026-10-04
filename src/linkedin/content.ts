@@ -1,11 +1,14 @@
-import { currentRoute, fallbackAnchor, findCurrentJob, type JobCandidate } from "./extract.js";
+import { currentRoute, fallbackAnchor, findCurrentJob, jobText, type JobCandidate } from "./extract.js";
 import { BAR_ID, DEBOUNCE_MS, MAX_WAIT_MS, MODERN_LAYOUT, SELECTORS, SETTLE_MS, URL_CHECK_MS } from "./selectors.js";
 import { ReadinessTracker, type ReadinessResult } from "./readiness.js";
 import { StatusBar } from "./status-bar.js";
+import { AnalysisClient } from "./analysis-client.js";
 
 function start(): () => void {
   const tracker = new ReadinessTracker();
   const bar = new StatusBar();
+  const analysis = new AnalysisClient(state => bar.renderAnalysis(state), () => schedule(0));
+  bar.onRetry = () => analysis.retry();
   let candidate: JobCandidate | null = null;
   let url = location.href;
   let navigationStarted = performance.now();
@@ -26,6 +29,7 @@ function start(): () => void {
     url = location.href;
     if (before.jobId === after.jobId && before.isJobsPage === after.isJobsPage) return false;
     tracker.navigate(after.jobId); attemptedExpansion.clear();
+    analysis.reset();
     navigationStarted = performance.now();
     if (!after.isJobsPage) { candidate = null; tracker.reset(); bar.remove(); }
     else bar.render({ phase: "reading", message: "Reading the opened job posting…" }, null);
@@ -38,11 +42,12 @@ function start(): () => void {
     try {
       checkNavigation();
       const route = currentRoute(url);
-      if (!route.isJobsPage) { candidate = null; tracker.reset(); bar.remove(); return; }
+      if (!route.isJobsPage) { analysis.reset(); candidate = null; tracker.reset(); bar.remove(); return; }
       tracker.navigate(route.jobId);
       const next = findCurrentJob(route);
-      if (!next && !route.jobId) { candidate = null; tracker.reset(); bar.remove(); return; }
+      if (!next && !route.jobId) { analysis.reset(); candidate = null; tracker.reset(); bar.remove(); return; }
       if (candidate?.jobId !== next?.jobId) {
+        analysis.reset();
         if (candidate?.jobId && next?.jobId) attemptedExpansion.clear();
         navigationStarted = performance.now();
       }
@@ -61,9 +66,12 @@ function start(): () => void {
         result = { phase: "unavailable", message: `${result.message} The posting may be incomplete or this layout is unsupported. Try refreshing LinkedIn.` };
       }
       bar.render(result, next);
+      if (result.phase === "ready" && next?.jobId) analysis.analyze({ id: next.jobId, title: next.title, company: next.company, description: jobText(next) });
+      else analysis.suspend();
       if (result.phase === "reading") schedule(SETTLE_MS);
       else if (result.phase === "waiting") schedule(1_000);
     } catch {
+      analysis.reset();
       tracker.invalidate();
       if (currentRoute(location.href).isJobsPage) {
         bar.mount(fallbackAnchor());
@@ -90,6 +98,7 @@ function start(): () => void {
     });
     if (!relevant) return;
     tracker.invalidate();
+    analysis.suspend();
     bar.render({ phase: "reading", message: "Reading job description…" }, candidate);
     schedule();
   });
@@ -109,10 +118,10 @@ function start(): () => void {
     window.removeEventListener("popstate", onNavigation); window.removeEventListener("hashchange", onNavigation);
     window.navigation?.removeEventListener("navigatesuccess", onNavigation);
     window.removeEventListener("pagehide", onPageHide); window.removeEventListener("pageshow", onPageShow);
-    candidate = null; tracker.reset(); bar.remove();
+    analysis.stop(); candidate = null; tracker.reset(); bar.remove();
   };
-  const onPageHide = (event: PageTransitionEvent) => { if (!event.persisted) stop(); };
-  const onPageShow = () => { onNavigation(); };
+  const onPageHide = (event: PageTransitionEvent) => { if (!event.persisted) stop(); else analysis.reset(); };
+  const onPageShow = () => { analysis.reset(); onNavigation(); };
   window.addEventListener("pagehide", onPageHide); window.addEventListener("pageshow", onPageShow);
   evaluate();
   return stop;

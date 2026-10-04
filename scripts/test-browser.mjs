@@ -74,18 +74,33 @@ try {
   await page.locator("#acceptable-cities").fill("Berlin\nHamburg");
   await page.locator("#remote-work").selectOption("hybrid");
   await page.locator('input[name="employment"][value="full-time"]').check();
+  await page.getByRole("checkbox", { name: "Working student (Werkstudent)", exact: true }).check();
+  await page.locator("#api-token").fill("synthetic-browser-key-01234567890123456789");
   await page.locator("#automatic-analysis").check();
   await page.locator("#save-preferences").click();
-  await waitText("Preferences and consent saved locally");
+  await waitText("Preferences, API key, and consent saved");
   const withPreferences = await stored();
   assert.equal(withPreferences.consent.automaticAnalysis, true);
   assert.deepEqual(withPreferences.preferences.acceptableCities, ["Berlin", "Hamburg"]);
   assert.equal(withPreferences.preferences.languages[0].proficiency, "intermediate");
+  assert.deepEqual(withPreferences.preferences.employmentTypes, ["full-time", "working-student"]);
   assert.notEqual(withPreferences.preferencesVersion, first.preferencesVersion);
   await page.reload(); await waitText("Settings loaded");
   assert.equal(await page.locator("#resume-preview").inputValue(), SAMPLE_TEXT);
   assert.equal(await page.locator("#automatic-analysis").isChecked(), true);
+  assert.equal(await page.getByRole("checkbox", { name: "Working student (Werkstudent)", exact: true }).isChecked(), true);
   console.log("PASS: preferences and consent survive reload");
+  const oldPreferenceVersion = (await stored()).preferencesVersion;
+  assert.equal(await page.locator(".language-level").inputValue(), "intermediate");
+  await page.locator(".language-level").selectOption({ label: "B1 (CEFR)" });
+  await page.locator("#save-preferences").click(); await waitText("Preferences, API key, and consent saved");
+  assert.equal((await stored()).preferences.languages[0].proficiency, "b1");
+  assert.notEqual((await stored()).preferencesVersion, oldPreferenceVersion);
+  await page.reload(); await waitText("Settings loaded");
+  assert.equal(await page.locator(".language-level").inputValue(), "b1");
+  assert.equal((await stored()).resume.version, first.resume.version);
+  withPreferences.preferences.languages[0].proficiency = "b1";
+  console.log("PASS: precise CEFR language levels persist without changing the saved resume or silently converting older levels");
 
   for (const name of ["no-text.pdf", "corrupted.pdf", "corrupted.docx", "too-many-pages.pdf"]) {
     await upload(name);
@@ -124,7 +139,7 @@ try {
   await page.locator("#discard-draft").click();
 
   await page.locator("#automatic-analysis").check();
-  await page.locator("#save-preferences").click(); await waitText("Preferences and consent saved locally");
+  await page.locator("#save-preferences").click(); await waitText("Preferences, API key, and consent saved");
   await page.locator("#disable-analysis").click(); await waitText("Automatic analysis preference disabled");
   assert.equal((await stored()).consent.automaticAnalysis, false);
   await page.locator("#delete-resume").click(); await waitText("Saved resume deleted");
@@ -173,7 +188,7 @@ try {
 
   await upload("sample-resume.pdf"); await confirm();
   await page.locator("#add-language").click(); await page.locator(".language-name").fill("English");
-  await page.locator("#save-preferences").click(); await waitText("Preferences and consent saved locally");
+  await page.locator("#save-preferences").click(); await waitText("Preferences, API key, and consent saved");
   await page.screenshot({ path: path.join(artifacts, "settings-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: path.join(artifacts, "settings-mobile.png"), fullPage: true });

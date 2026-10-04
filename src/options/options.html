@@ -10,10 +10,10 @@
   <body class="options">
     <main class="settings-layout">
       <header>
-        <p class="eyebrow">LOCAL SETUP</p>
+        <p class="eyebrow">JOB LENS SETTINGS</p>
         <h1>Resume &amp; preferences</h1>
         <p>Prepare the professional information you want Job Lens to use for matching.</p>
-        <p class="notice">Everything stays in this browser profile. This version makes no backend or AI requests. Local storage is not an encrypted vault.</p>
+        <p class="notice">Files are processed locally. With your consent, reviewed text and opened job descriptions are sent to our Cloudflare Worker and Workers AI. Local storage is not an encrypted vault.</p>
       </header>
       <p id="page-message" role="status" aria-live="polite">Loading saved settings…</p>
       <button id="reload-settings" class="secondary" type="button" hidden>Reload saved settings</button>
@@ -46,6 +46,7 @@
           <h2 id="preferences-title">2. Set your preferences</h2>
           <p class="muted">Leave an item empty if it is unknown or you have no preference. Empty fields are not treated as unmet requirements.</p>
           <h3>Languages you can work in</h3>
+          <p class="muted">Choose an exact CEFR level (A1–C2) when you know it, and keep it consistent with your reviewed CV. Broad labels such as Basic and Professional do not specify a CEFR level.</p>
           <div id="language-rows"></div>
           <button id="add-language" class="secondary" type="button">Add language</button>
           <label for="acceptable-cities">Acceptable cities (one per line)</label>
@@ -61,15 +62,21 @@
             <legend>Acceptable employment types</legend>
             <label class="check-row"><input type="checkbox" name="employment" value="full-time"> Full-time</label>
             <label class="check-row"><input type="checkbox" name="employment" value="part-time"> Part-time</label>
+            <label class="check-row"><input type="checkbox" name="employment" value="working-student"> Working student (Werkstudent)</label>
             <label class="check-row"><input type="checkbox" name="employment" value="contract"> Contract</label>
             <label class="check-row"><input type="checkbox" name="employment" value="freelance"> Freelance</label>
             <label class="check-row"><input type="checkbox" name="employment" value="internship"> Internship</label>
             <label class="check-row"><input type="checkbox" name="employment" value="temporary"> Temporary</label>
             <label class="check-row"><input type="checkbox" name="employment" value="apprenticeship"> Apprenticeship</label>
           </fieldset>
-          <h3>Automatic analysis preference</h3>
-          <p id="consent-help">Future matching will send the reviewed professional text, your preferences, and the job description you open to the Job Lens backend. The original file will stay on your device. We will identify the backend and ask for confirmation again before the first transmission. This version sends nothing.</p>
-          <label class="check-row"><input id="automatic-analysis" type="checkbox" disabled aria-describedby="consent-help"> I want automatic analysis when matching is available.</label>
+          <h3>Connect your personal testing API</h3>
+          <p class="muted">Backend: https://job-lens-api.saeedmohh10.workers.dev. Use your JOB_LENS_API_TOKEN testing secret, never a Cloudflare account token. This setup is for personal testing; keep the key private.</p>
+          <label for="api-token">Personal testing API key</label>
+          <input id="api-token" type="password" minlength="32" maxlength="128" autocomplete="off" spellcheck="false">
+          <p class="muted">Saved locally in trusted extension storage. The key is not encrypted; clearing this field and saving removes it.</p>
+          <h3>Automatic AI analysis</h3>
+          <p id="consent-help">When enabled, every ready job you open sends your reviewed professional resume text, language and work preferences, and the full detected job description to https://job-lens-api.saeedmohh10.workers.dev for Cloudflare Workers AI processing. Original files are never sent. Remove unnecessary personal information before enabling. You can disable analysis or delete all saved data at any time. AI usage uses the backend's shared quota.</p>
+          <label class="check-row"><input id="automatic-analysis" type="checkbox" disabled aria-describedby="consent-help"> I consent to sending this information and enabling automatic AI matching.</label>
           <p id="consent-status" class="muted">Confirm a resume first. This preference is off by default.</p>
           <div class="button-row">
             <button id="save-preferences" type="button">Save preferences &amp; consent</button>
@@ -77,9 +84,22 @@
           </div>
         </section>
       </fieldset>
+      <section class="card" aria-labelledby="provider-debug-title">
+        <h2 id="provider-debug-title">Troubleshoot an AI assessment</h2>
+        <p>Capture the next fresh analysis, then return to the job and click Re-analyze. Capturing adds no extra AI call. Use your saved resume, preferences and consent.</p>
+        <p class="muted">The full report contains your reviewed CV, preferences, posting, actual Workers AI request and raw response. It stays in trusted session storage until cleared, settings change or the browser closes. The API key is excluded. The work diagnostics below omit the CV.</p>
+        <div class="button-row">
+          <button id="capture-provider" type="button" class="secondary">Capture next analysis</button>
+          <button id="download-provider" type="button" class="secondary" disabled>Download full provider trace</button>
+          <button id="clear-provider" type="button" class="secondary">Clear capture</button>
+        </div>
+        <p id="provider-status" role="status" aria-live="polite">No provider capture saved.</p>
+        <label for="work-provider-diagnostics">Work diagnostics — select and copy for troubleshooting</label>
+        <textarea id="work-provider-diagnostics" rows="12" readonly hidden></textarea>
+      </section>
       <section class="card" aria-labelledby="delete-title">
         <h2 id="delete-title">Delete your local data</h2>
-        <p>Remove the saved resume, all preferences, and the automatic analysis preference from this browser profile.</p>
+        <p>Remove the saved resume, preferences, testing API key, consent, and session match cache from this browser profile.</p>
         <button id="delete-all" class="danger" type="button" disabled>Delete all saved data</button>
       </section>
     </main>

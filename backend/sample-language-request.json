@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "requestId": "sample-language-001",
+  "resume": {
+    "version": "sample-language-resume-v1",
+    "text": "Student in an advanced economics degree with practical experience in data analysis and banking. Confident with Excel, PowerPoint, and Word. Sprachkenntnisse: Deutsch: Muttersprache. Englisch: C2. Both language declarations cover written and spoken proficiency."
+  },
+  "preferences": {
+    "languages": [],
+    "acceptableCities": ["Berlin"],
+    "remoteWork": "any",
+    "employmentTypes": ["internship"]
+  },
+  "preferencesVersion": "sample-language-preferences-v1",
+  "job": {
+    "id": "987654321",
+    "title": "Werkstudent/Praktikant Governance, Compliance & Data",
+    "company": "Synthetic language test",
+    "description": "Werkstudent/Praktikant im Bereich Governance, Compliance & Data. Standorte: Frankfurt (Main), Berlin, Düsseldorf, Hamburg, Hannover, Mannheim, München, Nürnberg und Stuttgart. Dein Skillset: Fortgeschrittenes natur- oder wirtschaftswissenschaftliches Studium; Erfahrung in Datenanalyse oder Banking wünschenswert; routinierter Umgang mit PowerPoint, Word und Excel. Deutsch und Englisch sehr gut in Wort und Schrift. Du unterstützt die Teams bei Datenanalyse, Präsentationen und Projektarbeit. Als Praktikant oder Werkstudent bist du ab Februar 2027 verfügbar."
+  },
+  "consent": { "granted": true, "noticeVersion": "job-lens-cloudflare-v1" }
+}

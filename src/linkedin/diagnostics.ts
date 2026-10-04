@@ -13,7 +13,7 @@ export function layoutDiagnostics(): string {
   }
   const allowed = (element: HTMLElement) => isVisible(element) && !element.closest(`#${BAR_ID}`)
     && !element.closest(SELECTORS.excluded.join(","));
-  const counts = Object.fromEntries(["roots", "titles", "descriptions", "loading", "expandButtons"].map((group) => [group,
+  const counts = Object.fromEntries(["roots", "titles", "descriptions", "headerDetails", "loading", "expandButtons"].map((group) => [group,
     Object.fromEntries(SELECTORS[group as keyof typeof SELECTORS].map((selector) => [selector,
       Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(allowed).length])),
   ]));

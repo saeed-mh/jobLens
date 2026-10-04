@@ -1,0 +1,22 @@
+{
+  "postingDetails": "LinkedIn posting details:\nSoftware Engineer (Python/ Backend)\nPaderborn, North Rhine-Westphalia, Germany (Hybrid)\nmetamorphosis GmbH\nPaderborn, North Rhine-Westphalia, Germany\nHybrid\nFull-time",
+  "preferences": {
+    "acceptableCities": ["Dortmund", "Padernborn"],
+    "remoteWork": "hybrid",
+    "employmentTypes": ["part-time", "working-student", "internship"]
+  },
+  "answers": {
+    "location_status": {
+      "type": "choice", "choice": "not_required", "confidence": 0.4777,
+      "probabilities": { "assessable": 0.0798, "not_required": 0.7933, "unknown": 0.1269 }
+    },
+    "location": {
+      "type": "score", "score": 2.3983, "confidence": 0.0024,
+      "probabilities": { "0": 0.1712, "1": 0.178, "2": 0.1733, "3": 0.1904, "4": 0.1333, "5": 0.1538 }
+    },
+    "location_conflict": {
+      "type": "choice", "choice": "no_conflict", "confidence": 0.5164,
+      "probabilities": { "conflict": 0.0371, "no_conflict": 0.8075, "unknown": 0.1554 }
+    }
+  }
+}

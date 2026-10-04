@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "requestId": "sample-requirements-001",
+  "resume": {
+    "version": "synthetic-requirements-resume-v1",
+    "text": "Computer Science student with practical Python backend development, Git, and SOLID, DRY, KISS and YAGNI architecture experience. Languages: English B2; German B1, written and spoken. Seeking a full-time software engineering role."
+  },
+  "preferences": {
+    "languages": [],
+    "acceptableCities": [
+      "Paderborn"
+    ],
+    "remoteWork": "hybrid",
+    "employmentTypes": [
+      "full-time"
+    ]
+  },
+  "preferencesVersion": "synthetic-requirements-preferences-v1",
+  "job": {
+    "id": "123456789",
+    "title": "Software Engineer (Python/ Backend)",
+    "company": "metamorphosis GmbH",
+    "description": "Software Engineer (Python/ Backend)\n\nmetamorphosis GmbH • Paderborn, North Rhine-Westphalia, Germany (Hybrid)\n\n\nSave\nApply\n\nSoftware Engineer (Python/ Backend)\n\nmetamorphosis GmbH • Paderborn, North Rhine-Westphalia, Germany (Hybrid)\n\n\nSave\nApply\n\nCompany logo for, metamorphosis GmbH.\nmetamorphosis GmbH\n\n\nSoftware Engineer (Python/ Backend)\n\nPaderborn, North Rhine-Westphalia, Germany · 1 week ago · Over 100 people clicked apply\n\nPromoted by hirer · Responses managed off LinkedIn\n\nHybrid\nFull-time\nApply\n\nSave\nDetermine your fit and how to stand out\nGet AI-powered advice on this job and more exclusive features with Premium. Reactivate Premium: 50% Off\n\nShow match details\n\nTailor my resume\n\nHelp me stand out\n\nSee how you compare to over 100 others who clicked apply\n\nAccess exclusive applicant insights, see jobs where you have the highest chance of hearing back, and more.\n\nReactivate Premium: 50% Off\n\nPeople you can reach out to\nMeet the hiring team\n\n\nSophie Blasek\n\n• 3rd\n\nHR Specialist\n\nJob poster\n\nMessage\nAbout the job\nAls Software Engineer (Python / Backend) (m/w/d) löst du in unserem Team weitreichende programmatische Probleme. Dabei liegt dein Fokus auf der Entwicklung mit Python. Du befasst dich mit der Integration algorithmischer Lösungen, der Implementierung der Business Logic und vielen weiteren Aufgaben.\nAufgaben sind:\nEntwicklung von Backend- und Processing-Komponenten in Python\nIntegration von Algorithmen und Modellen in produktive Systeme\nOptimierung der Performance für den realen Einsatz\nEnge Zusammenarbeit mit Algorithm und Deep Learning Engineers\nEntwicklung interner Tools und Systeme, die unsere Software effizienter machen\nEntwicklung von prototypischen Projekten und Infrastruktur, die die Grundlage für zukünftige Produktfeatures bilden\n\nDas erwartet dich bei metamorphosis\nKarriere in einer absoluten Zukunftsbranche. Geh jetzt den nächsten Schritt.Einzigartige und spannende Problemstellungen in der Medizintechnik.Fachliche und persönliche Weiterbildung in den Bereichen, die dich wirklich interessieren.Kompetitives Gehalt. Spannendes Thema, spannendes Gehalt.Flexible Arbeitszeiten. Mach deine Karriere kompatibel mit deinem Leben.Gesellschaftlicher Mehrwert. Deine Arbeit wird das Leben von Millionen von Menschen nachhaltig verbessern.\nDas bringst du mit:\nAbgeschlossenes Studium der Informatik, Elektrotechnik, Computer Engineering oder verwandter Studiengänge. Als Werkstudent musst du in einem dieser Studiengänge eingeschrieben sein.Faszination für neue Wege und LösungenLeidenschaft für klaren, wartbaren und gut strukturierten CodeDiskussionsfreude, denn nur damit gelingt uns das UnmöglicheSouveränes Englisch in Wort und Schrift (>= B2)Souveränes Deutsch in Wort und Schrift (Werkstudenten >= B1, Vollzeit >= B2)\nVorteilhafte Erfahrung:\nPython-Erfahrung\nSicherer Umgang mit Softwarearchitekturprinzipien (SOLID, DRY, KISS, YAGNI)\nErfahrung mit Git"
+  },
+  "consent": {
+    "granted": true,
+    "noticeVersion": "job-lens-cloudflare-v1"
+  }
+}

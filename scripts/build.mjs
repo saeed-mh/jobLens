@@ -16,7 +16,7 @@ execFileSync(process.execPath, [compilerPath, "--project", "tsconfig.json", "--n
 // Resolve browser dependencies locally; no executable code is loaded from a CDN.
 await build({
   absWorkingDir: projectRoot,
-  entryPoints: ["src/popup/popup.ts", "src/options/options.ts", "src/resume/extraction.worker.ts"],
+  entryPoints: ["src/popup/popup.ts", "src/options/options.ts", "src/resume/extraction.worker.ts", "src/background/worker.ts"],
   outbase: "src", outdir: "dist", bundle: true, platform: "browser",
   format: "esm", target: "chrome125", legalComments: "linked",
   // PDF.js relies on class/function names; do not minify identifiers.

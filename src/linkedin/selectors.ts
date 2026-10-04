@@ -19,6 +19,14 @@ export const SELECTORS = {
     ".job-details-jobs-unified-top-card__company-name", ".jobs-unified-top-card__company-name",
     ".jobs-details-top-card__company-url", ".topcard__org-name-link",
   ],
+  headerDetails: [
+    ".job-details-jobs-unified-top-card__primary-description-container",
+    ".jobs-unified-top-card__primary-description",
+    ".job-details-jobs-unified-top-card__job-insight",
+    ".jobs-unified-top-card__job-insight",
+    ".topcard__flavor--bullet",
+    ".description__job-criteria-item",
+  ],
   loading: [
     '[aria-busy="true"]', ".artdeco-loader", ".jobs-details__loading",
     ".jobs-description__skeleton", ".jobs-details-skeleton",

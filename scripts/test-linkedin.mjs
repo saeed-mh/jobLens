@@ -24,6 +24,9 @@ context.on("request", (request) => networkRequests.push(request.url()));
 
 const DESCRIPTION_A = "We are looking for a Backend Engineer to design reliable services using TypeScript, PostgreSQL, and REST APIs. Responsibilities include writing tests, reviewing code, and maintaining distributed systems. Professional English is required. This role is hybrid in Berlin and offers full-time employment.";
 const DESCRIPTION_B = "We are looking for a Data Engineer to build analytics pipelines using Python and SQL. Responsibilities include improving data quality, maintaining batch processing, and collaborating with analysts. Professional German is required. This role is remote in Germany and offers a six-month contract.";
+const suppliedPosting = JSON.parse(await readFile(path.join(root, "backend/sample-requirements-request.json"), "utf8"));
+const suppliedBody = suppliedPosting.job.description.split("About the job\n")[1];
+assert.ok(suppliedBody && !suppliedBody.includes("Paderborn") && !suppliedBody.includes("Hybrid"));
 const styles = '<style>body{margin:0;background:#f3f2ef;font:16px/1.5 system-ui;color:#17243a}main{display:flex;gap:24px;max-width:1120px;margin:32px auto;padding:0 16px}.jobs-search-results-list{width:250px;background:white;padding:20px}.jobs-search__job-details--container,.details{background:white;padding:24px;flex:1;min-width:0}h1{font-size:24px}.hidden{display:none}</style>';
 const sidebar = '<aside class="jobs-search-results-list"><article class="job-card-container" data-job-id="999"><h1>Unopened recommendation</h1><div id="recommendation-text">DO NOT READ THIS RECOMMENDATION</div></article></aside>';
 const title = (id, name) => `<div class="job-details-jobs-unified-top-card__job-title"><h1><a href="/jobs/view/${id}/">${name}</a></h1></div>`;
@@ -247,6 +250,39 @@ try {
   });
   await waitState('waiting'); assert.equal(await readyText(), '');
   console.log("PASS: modern layout rejects ambiguous header titles instead of guessing");
+
+  const openedHeader = `<p>metamorphosis GmbH</p><p>Paderborn, North Rhine-Westphalia, Germany</p><button>Hybrid<div>Matches your job preferences</div></button><button>Full-time</button><a>Apply</a><p>${suppliedPosting.job.title}</p><p>metamorphosis GmbH • Paderborn, North Rhine-Westphalia, Germany · 1 week ago · Over 100 people clicked apply</p><p>Promoted by hirer · Responses managed off LinkedIn</p><p>Get AI-powered advice on this job and more exclusive features with Premium.</p><p>See how you compare to over 100 others who clicked apply</p><p>Access exclusive applicant insights, see jobs where you have the highest chance of hearing back, and more.</p><a>Reactivate Premium: 50% Off</a><p hidden>DO NOT READ HIDDEN HEADER</p>`;
+  html = `<!doctype html><html><head><meta charset="utf-8">${styles}</head><body><main>${sidebar}${panel("600", suppliedPosting.job.title, suppliedBody).replace('<div class="jobs-description">', `<div class="job-details-jobs-unified-top-card__primary-description-container">Paderborn, North Rhine-Westphalia, Germany</div><div class="job-details-jobs-unified-top-card__job-insight"><button>Hybrid</button></div><div class="job-details-jobs-unified-top-card__job-insight"><button>Full-time</button></div><div class="jobs-description">`).replace('DO NOT READ THIS SIMILAR JOB', '<div class="job-details-jobs-unified-top-card__primary-description-container">DO NOT READ OTHER LOCATION</div>')}</main></body></html>`;
+  await page.goto("https://www.linkedin.com/jobs/search/?currentJobId=600"); await waitState("ready");
+  const legacyPreview = await readyText();
+  assert.ok(legacyPreview.startsWith("LinkedIn posting details:\nPaderborn, North Rhine-Westphalia, Germany\nHybrid\nFull-time\n\nAbout the job:\n"));
+  assert.ok(legacyPreview.includes("Werkstudenten >= B1"));
+  assert.ok(!legacyPreview.includes("DO NOT READ"));
+  console.log("PASS: supplied posting reads header-only city, hybrid and employment labels in the classic layout, excluding other jobs");
+
+  html = `<!doctype html><html><head><meta charset="utf-8">${styles}</head><body><div id="root"><div data-component-type="LazyColumn"><h2>Other result</h2><p>DO NOT READ OTHER CITY</p></div>${modernPanel("610", suppliedPosting.job.title, suppliedBody).replace(`<h2>${suppliedPosting.job.title}</h2>`, `<h2>${suppliedPosting.job.title}</h2>${openedHeader}`)}</div></body></html>`;
+  await page.goto("https://www.linkedin.com/jobs/search/?currentJobId=610"); await waitState("ready");
+  const modernPreview = await readyText();
+  assert.ok(modernPreview.startsWith("LinkedIn posting details:\nmetamorphosis GmbH\nPaderborn, North Rhine-Westphalia, Germany\nHybrid\nFull-time\n\nAbout the job:\n"));
+  const cleanHeader = modernPreview.split("\n\nAbout the job:\n")[0];
+  assert.equal(cleanHeader.split("Paderborn").length - 1, 1);
+  assert.ok(!/Premium|applicant|week ago|AI-powered|Apply|Software Engineer/iu.test(cleanHeader));
+  assert.ok(!modernPreview.includes("DO NOT READ") && !modernPreview.includes("Apply") && !modernPreview.includes("People who can help") && !modernPreview.includes("Matches your job preferences"));
+  await bar.getByText("Troubleshoot this layout", { exact: true }).click();
+  assert.equal(await bar.getByRole("button", { name: "Copy layout diagnostics" }).isVisible(), true);
+  await page.evaluate(() => {
+    history.pushState({}, '', '/jobs/search/?currentJobId=611');
+    document.querySelector('#fixture-modern-panel h2').textContent = 'New posting';
+    document.getElementById('JobDetails_AboutTheJob_610').id = 'JobDetails_AboutTheJob_611';
+    document.querySelector('#fixture-modern-panel h2 + p + p').textContent = 'Hamburg';
+  });
+  await waitState("waiting"); await page.waitForTimeout(1600);
+  assert.notEqual(await bar.getAttribute("data-state"), "ready", "Changing header metadata cannot make an unchanged old body ready");
+  assert.equal(await readyText(), "");
+  await page.evaluate(text => document.querySelector('.modern-body').textContent = text, DESCRIPTION_B);
+  await waitState("ready");
+  assert.ok((await readyText()).includes("Hamburg"));
+  console.log("PASS: modern header stays within the opened column and ends before detail slots; changed headers never validate stale job bodies");
 
   html = `<!doctype html><html><head>${styles}</head><body><main><div class="details"><h1>Backend Engineer</h1><div class="description__text--rich">${DESCRIPTION_A}</div></div><div class="details"><h1>Data Engineer</h1><div class="description__text--rich">${DESCRIPTION_B}</div></div></main></body></html>`;
   await page.goto("https://www.linkedin.com/jobs/view/350/");

@@ -100,7 +100,7 @@ test("Missing text, punctuation-only text, and excessive text are not valid resu
 
 test("Resume replacement changes the version and revokes consent; unchanged text keeps the version", () => {
   const confirmed = model.confirmResume(model.defaultSettings(), SAMPLE_TEXT);
-  const enabled = model.updatePreferences(confirmed, confirmed.preferences, true);
+  const enabled = model.updatePreferences({ ...confirmed, apiToken: "synthetic-test-key-01234567890123456789" }, confirmed.preferences, true);
   assert.equal(enabled.consent.automaticAnalysis, true);
   assert.equal(model.confirmResume(enabled, ` ${SAMPLE_TEXT} `).resume.version, confirmed.resume.version);
   const changed = model.confirmResume(enabled, `${SAMPLE_TEXT} Docker and Kubernetes.`);
@@ -123,6 +123,31 @@ test("Preferences get an independent version and validate language proficiency",
   assert.throws(() => model.validatePreferences({ ...preferences, languages: [{ name: "German", proficiency: "fluent" }, { name: "german", proficiency: "basic" }] }));
 });
 
+test("Working-student preferences save and reload distinctly from part-time without replacing existing settings", () => {
+  const initial = model.confirmResume(model.defaultSettings(), SAMPLE_TEXT);
+  const legacy = model.updatePreferences(initial, { ...initial.preferences, employmentTypes: ["part-time"] }, false);
+  const updated = model.updatePreferences(legacy, { ...legacy.preferences, employmentTypes: ["working-student"] }, false);
+  const reloaded = model.parseSettings(JSON.parse(JSON.stringify(updated)));
+  assert.deepEqual(reloaded.preferences.employmentTypes, ["working-student"]);
+  assert.notEqual(updated.preferencesVersion, legacy.preferencesVersion);
+  assert.equal(reloaded.resume.version, initial.resume.version);
+  assert.deepEqual(model.parseSettings(JSON.parse(JSON.stringify(legacy))).preferences.employmentTypes, ["part-time"]);
+  assert.deepEqual(model.validatePreferences({ ...initial.preferences, employmentTypes: [...model.EMPLOYMENT_TYPES] }).employmentTypes, [...model.EMPLOYMENT_TYPES]);
+  assert.throws(() => model.validatePreferences({ ...initial.preferences, employmentTypes: ["student-made-up"] }));
+});
+
+test("Exact CEFR preferences save and reload without reinterpreting legacy broad levels", () => {
+  const initial = model.defaultSettings();
+  const legacy = model.updatePreferences(initial, { ...initial.preferences, languages: [{ name: "German", proficiency: "basic" }] }, false);
+  assert.equal(model.parseSettings(JSON.parse(JSON.stringify(legacy))).preferences.languages[0].proficiency, "basic");
+  for (const proficiency of ["a1", "a2", "b1", "b2", "c1", "c2"]) {
+    const updated = model.updatePreferences(legacy, { ...legacy.preferences, languages: [{ name: "German", proficiency }] }, false);
+    assert.equal(model.parseSettings(JSON.parse(JSON.stringify(updated))).preferences.languages[0].proficiency, proficiency);
+    assert.notEqual(updated.preferencesVersion, legacy.preferencesVersion);
+  }
+  assert.throws(() => model.validatePreferences({ ...initial.preferences, languages: [{ name: "German", proficiency: "b3" }] }));
+});
+
 test("Malformed storage cannot silently enable consent", () => {
   assert.throws(() => model.parseSettings({ schemaVersion: 2 }));
   const state = model.confirmResume(model.defaultSettings(), SAMPLE_TEXT);
@@ -133,13 +158,14 @@ test("Malformed storage cannot silently enable consent", () => {
 test("Storage is local, restricted, rejects stale saves, and can delete all saved information", async () => {
   Object.defineProperty(globalThis, "navigator", { value: { locks: { request: async (_name, callback) => callback() } }, configurable: true });
   const data = {};
+  const sessionData = { "jobLens.analysisCache.v1": [], "jobLens.providerTrace.v1": { resume: "private capture" } };
   let accessLevel;
   globalThis.chrome = { storage: { local: {
     setAccessLevel: async (options) => { accessLevel = options.accessLevel; },
     get: async () => structuredClone(data),
     set: async (values) => Object.assign(data, structuredClone(values)),
     remove: async (key) => { delete data[key]; },
-  } } };
+  }, session: { remove: async (keys) => { for (const key of Array.isArray(keys) ? keys : [keys]) delete sessionData[key]; } } } };
   const initial = await storage.readSettings();
   const confirmed = model.confirmResume(initial, SAMPLE_TEXT);
   await storage.saveSettings(confirmed, initial.revision);
@@ -154,4 +180,5 @@ test("Storage is local, restricted, rejects stale saves, and can delete all save
   chrome.storage.local.set = originalSet;
   await storage.deleteAllSettings();
   assert.deepEqual(data, {});
+  assert.deepEqual(sessionData, {});
 });

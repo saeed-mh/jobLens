@@ -1,10 +1,10 @@
 import { validateResumeText } from "../resume/validation.js";
 
 export const SETTINGS_KEY = "jobLens.settings.v1";
-export const CONSENT_NOTICE_VERSION = "stage2-local-setup-v1";
-export const PROFICIENCY_LEVELS = ["basic", "intermediate", "professional", "fluent", "native"] as const;
+export const CONSENT_NOTICE_VERSION = "job-lens-cloudflare-v1";
+export const PROFICIENCY_LEVELS = ["basic", "intermediate", "professional", "fluent", "native", "a1", "a2", "b1", "b2", "c1", "c2"] as const;
 export const REMOTE_PREFERENCES = ["any", "remote", "hybrid", "onsite"] as const;
-export const EMPLOYMENT_TYPES = ["full-time", "part-time", "contract", "freelance", "internship", "temporary", "apprenticeship"] as const;
+export const EMPLOYMENT_TYPES = ["full-time", "part-time", "working-student", "contract", "freelance", "internship", "temporary", "apprenticeship"] as const;
 export type ProficiencyLevel = typeof PROFICIENCY_LEVELS[number];
 export type RemotePreference = typeof REMOTE_PREFERENCES[number];
 export type EmploymentType = typeof EMPLOYMENT_TYPES[number];
@@ -22,6 +22,7 @@ export interface Settings {
   resume: { text: string; version: string; confirmedAt: string } | null;
   preferences: Preferences;
   preferencesVersion: string;
+  apiToken: string;
   consent: { automaticAnalysis: boolean; noticeVersion: string; updatedAt: string | null };
 }
 
@@ -29,7 +30,7 @@ export function defaultSettings(): Settings {
   return {
     schemaVersion: 1, revision: "initial", resume: null,
     preferences: { languages: [], acceptableCities: [], remoteWork: "any", employmentTypes: [] },
-    preferencesVersion: "initial",
+    preferencesVersion: "initial", apiToken: "",
     consent: { automaticAnalysis: false, noticeVersion: CONSENT_NOTICE_VERSION, updatedAt: null },
   };
 }
@@ -71,6 +72,10 @@ export function parseSettings(value: unknown): Settings {
   if (value === undefined) return defaultSettings();
   if (typeof value !== "object" || value === null) throw new Error("Saved settings are invalid.");
   const settings = value as Settings;
+  settings.apiToken ??= "";
+  if (typeof settings.apiToken !== "string" || (settings.apiToken && !/^[a-zA-Z0-9_-]{32,128}$/.test(settings.apiToken))) {
+    throw new Error("Invalid personal testing API key.");
+  }
   if (settings.schemaVersion !== 1 || typeof settings.revision !== "string"
     || typeof settings.preferencesVersion !== "string" || !settings.consent
     || typeof settings.consent.automaticAnalysis !== "boolean" || typeof settings.consent.noticeVersion !== "string"
@@ -85,7 +90,7 @@ export function parseSettings(value: unknown): Settings {
     settings.resume.text = validateResumeText(settings.resume.text);
   }
   settings.preferences = validatePreferences(settings.preferences);
-  if (!settings.resume || settings.consent.noticeVersion !== CONSENT_NOTICE_VERSION) {
+  if (!settings.resume || !settings.apiToken || settings.consent.noticeVersion !== CONSENT_NOTICE_VERSION) {
     settings.consent.automaticAnalysis = false;
   }
   return settings;
@@ -104,6 +109,7 @@ export function confirmResume(settings: Settings, text: string): Settings {
 export function updatePreferences(settings: Settings, preferences: Preferences, automaticAnalysis: boolean): Settings {
   const validated = validatePreferences(preferences);
   if (automaticAnalysis && !settings.resume) throw new Error("Confirm and save a resume before enabling automatic analysis.");
+  if (automaticAnalysis && !settings.apiToken) throw new Error("Save your personal testing API key before enabling automatic analysis.");
   return {
     ...settings, revision: crypto.randomUUID(), preferences: validated,
     preferencesVersion: JSON.stringify(validated) === JSON.stringify(settings.preferences)

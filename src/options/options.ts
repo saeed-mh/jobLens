@@ -3,6 +3,7 @@ import { normalizeText, validateResumeText, ResumeError } from "../resume/valida
 import { confirmResume, defaultSettings, PROFICIENCY_LEVELS, SETTINGS_KEY, updatePreferences, withoutResume,
   type Settings, type Preferences, type ProficiencyLevel, type RemotePreference, type EmploymentType } from "../shared/settings.js";
 import { deleteAllSettings, readSettings, saveSettings } from "../shared/storage.js";
+import { PROVIDER_TRACE_KEY, workTraceDiagnostics } from "../shared/provider-trace.js";
 
 function element<T extends HTMLElement>(id: string): T {
   const result = document.getElementById(id);
@@ -23,6 +24,7 @@ const saveResumeButton = element<HTMLButtonElement>("save-resume");
 const deleteResumeButton = element<HTMLButtonElement>("delete-resume");
 const deleteAllButton = element<HTMLButtonElement>("delete-all");
 const automaticAnalysis = element<HTMLInputElement>("automatic-analysis");
+const apiToken = element<HTMLInputElement>("api-token");
 const disableAnalysisButton = element<HTMLButtonElement>("disable-analysis");
 const languageRows = element<HTMLDivElement>("language-rows");
 let saved = defaultSettings();
@@ -49,9 +51,10 @@ function syncControls(): void {
   deleteAllButton.disabled = busy || extracting;
   deleteResumeButton.disabled = !saved.resume || extracting;
   saveResumeButton.disabled = extracting || !confirmation.checked || Boolean(review.hidden);
-  automaticAnalysis.disabled = !saved.resume || resumeIsDraft() || extracting;
+  automaticAnalysis.disabled = !saved.resume || !apiToken.value.trim() || resumeIsDraft() || extracting;
   element<HTMLButtonElement>("save-preferences").disabled = extracting || resumeIsDraft();
   disableAnalysisButton.disabled = !saved.consent.automaticAnalysis;
+  element<HTMLButtonElement>("capture-provider").disabled = !loaded || busy || stale || extracting || resumeIsDraft() || !saved.consent.automaticAnalysis;
   element<HTMLParagraphElement>("text-count").textContent = `${preview.value.length.toLocaleString()} / 100,000 characters`;
   element<HTMLParagraphElement>("saved-resume-status").textContent = saved.resume
     ? `Confirmed resume saved locally (${saved.resume.text.length.toLocaleString()} characters). Upload another file to replace it.`
@@ -59,8 +62,8 @@ function syncControls(): void {
   element<HTMLParagraphElement>("consent-status").textContent = resumeIsDraft()
     ? "Confirm or discard the resume draft before saving preferences or consent."
     : saved.consent.automaticAnalysis
-      ? "Saved preference: on. Matching is not connected yet; this version sends nothing."
-      : "Saved preference: off. Confirm a resume first, then opt in and save if you wish.";
+      ? "Automatic AI matching is on. Ready LinkedIn jobs may send the reviewed information to Cloudflare."
+      : "Automatic AI matching is off. Confirm a resume, enter your testing API key, and opt in before saving.";
 }
 
 function addLanguage(name = "", proficiency: ProficiencyLevel = "professional"): void {
@@ -80,7 +83,7 @@ function addLanguage(name = "", proficiency: ProficiencyLevel = "professional"):
   select.id = `language-level-${suffix}`; select.className = "language-level"; levelLabel.htmlFor = select.id;
   for (const level of PROFICIENCY_LEVELS) {
     const option = document.createElement("option");
-    option.value = level; option.textContent = level[0].toUpperCase() + level.slice(1); select.append(option);
+    option.value = level; option.textContent = /^[abc][12]$/.test(level) ? `${level.toUpperCase()} (CEFR)` : level[0].toUpperCase() + level.slice(1); select.append(option);
   }
   select.value = proficiency;
   const remove = document.createElement("button");
@@ -109,6 +112,7 @@ function renderSaved(): void {
     checkbox.checked = saved.preferences.employmentTypes.includes(checkbox.value as EmploymentType);
   });
   automaticAnalysis.checked = saved.consent.automaticAnalysis;
+  apiToken.value = saved.apiToken;
   syncControls();
 }
 
@@ -214,8 +218,17 @@ function readPreferences(): Preferences {
 element<HTMLButtonElement>("save-preferences").addEventListener("click", async () => {
   if (resumeIsDraft() || extracting) return;
   try {
-    await persist(updatePreferences(saved, readPreferences(), automaticAnalysis.checked), "Preferences and consent saved locally. No data has been sent.");
+    const token = apiToken.value.trim();
+    if (token && !/^[a-zA-Z0-9_-]{32,128}$/.test(token)) throw new Error("Use the 32–128 character personal testing key from your Worker secret.");
+    if (automaticAnalysis.checked && (!saved.consent.automaticAnalysis || token !== saved.apiToken)
+      && !window.confirm("Enable automatic AI matching? Ready LinkedIn jobs will send your reviewed resume text, preferences, and job descriptions to job-lens-api.saeedmohh10.workers.dev and Cloudflare Workers AI. Your original file stays on your device. You can disable this in settings.")) return;
+    await persist(updatePreferences({ ...saved, apiToken: token }, readPreferences(), automaticAnalysis.checked), "Preferences, API key, and consent saved. Automatic analysis follows your saved consent.");
   } catch (error) { message(error instanceof Error ? error.message : "Check your preferences.", true); }
+});
+
+apiToken.addEventListener("input", () => {
+  automaticAnalysis.checked = false;
+  message("API key changed. Review consent and save preferences to apply it."); syncControls();
 });
 
 disableAnalysisButton.addEventListener("click", async () => {
@@ -253,5 +266,41 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 reloadButton.addEventListener("click", () => { void load(); });
+async function renderCapture(): Promise<void> {
+  const trace = (await chrome.storage.session.get(PROVIDER_TRACE_KEY))[PROVIDER_TRACE_KEY];
+  const output = element<HTMLTextAreaElement>("work-provider-diagnostics");
+  const status = element<HTMLParagraphElement>("provider-status");
+  output.value = ""; output.hidden = true;
+  element<HTMLButtonElement>("download-provider").disabled = true;
+  if (!trace) { status.textContent = "No provider capture saved."; return; }
+  if (trace.format !== "job-lens-extension-provider-trace-v1") {
+    status.textContent = trace.phase === "armed" && trace.expiresAt <= Date.now() ? "Capture expired. Arm it again before re-analyzing." : trace.message;
+    return;
+  }
+  try {
+    output.value = workTraceDiagnostics(trace); output.hidden = false;
+    status.textContent = "Captured the actual extension request and raw provider response. Copy the work diagnostics below; the full download includes your CV.";
+    element<HTMLButtonElement>("download-provider").disabled = false;
+  } catch { status.textContent = "The saved capture is invalid. Clear it and capture a fresh analysis."; }
+}
+element<HTMLButtonElement>("capture-provider").addEventListener("click", async () => {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "jobLens.armProviderCapture" });
+    if (!response?.ok) throw new Error(response?.message ?? "Could not prepare the capture.");
+    await renderCapture();
+  } catch (error) { element<HTMLParagraphElement>("provider-status").textContent = error instanceof Error ? error.message : "Could not prepare the capture."; }
+});
+element<HTMLButtonElement>("clear-provider").addEventListener("click", async () => {
+  await chrome.runtime.sendMessage({ type: "jobLens.clearProviderCapture" }); await renderCapture();
+});
+element<HTMLButtonElement>("download-provider").addEventListener("click", async () => {
+  const trace = (await chrome.storage.session.get(PROVIDER_TRACE_KEY))[PROVIDER_TRACE_KEY];
+  if (trace?.format !== "job-lens-extension-provider-trace-v1") return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(trace, null, 2)], { type: "application/json;charset=utf-8" }));
+  const link = document.createElement("a"); link.href = url; link.download = "job-lens-provider-trace.json"; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+});
+chrome.storage.onChanged.addListener((changes, area) => { if (area === "session" && changes[PROVIDER_TRACE_KEY]) void renderCapture(); });
+void renderCapture();
 window.addEventListener("pagehide", () => controller?.abort());
 void load();

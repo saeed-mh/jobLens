@@ -7,6 +7,7 @@ export interface JobObservation {
   title: string;
   company: string;
   description: string;
+  postingDetails?: string;
   descriptionElement: object | null;
   loading: boolean;
   collapsed: boolean;
@@ -69,12 +70,12 @@ export class ReadinessTracker {
     }
     const stable = this.stable;
     if (!stable || stable.jobId !== input.jobId || stable.title !== input.title || stable.company !== input.company
-      || stable.description !== input.description || stable.descriptionElement !== input.descriptionElement) {
+      || stable.description !== input.description || stable.postingDetails !== input.postingDetails || stable.descriptionElement !== input.descriptionElement) {
       this.stable = input; this.stableSince = now;
       return { phase: "reading", message: "Reading job description…" };
     }
     if (now - this.stableSince < SETTLE_MS) return { phase: "reading", message: "Reading job description…" };
     this.transitionBaseline = null;
-    return { phase: "ready", message: "Job description ready · AI matching is not connected yet" };
+    return { phase: "ready", message: "Job description ready" };
   }
 }

@@ -1,10 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Job Lens",
-  "version": "0.3.2",
-  "description": "Read the opened LinkedIn job posting and prepare local resume matching.",
+  "version": "0.6.11",
+  "description": "Compare your reviewed resume with opened LinkedIn jobs using consent-based AI matching.",
   "minimum_chrome_version": "125",
   "permissions": ["storage"],
+  "host_permissions": ["https://job-lens-api.saeedmohh10.workers.dev/*"],
+  "background": { "service_worker": "background/worker.js", "type": "module" },
   "content_scripts": [
     {
       "matches": ["https://www.linkedin.com/*"],
@@ -15,7 +17,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; worker-src 'self'; object-src 'none'; connect-src 'self'; base-uri 'none'"
+    "extension_pages": "script-src 'self'; worker-src 'self'; object-src 'none'; connect-src 'self' https://job-lens-api.saeedmohh10.workers.dev; base-uri 'none'"
   },
   "action": {
     "default_title": "Job Lens",
