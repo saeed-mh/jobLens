@@ -3,6 +3,7 @@ import { copyFile, cp, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { writePrivacyPage } from "./privacy-page.mjs";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const compilerPath = path.join(projectRoot, "node_modules/typescript/bin/tsc");
@@ -53,4 +54,6 @@ for (const relativePath of staticFiles) {
   await copyFile(path.join(projectRoot, "src", relativePath), destination);
 }
 
+await cp(path.join(projectRoot, "src/icons"), path.join(projectRoot, "dist/icons"), { recursive: true });
+await writePrivacyPage(projectRoot);
 console.log("Build complete. Load the dist folder in chrome://extensions.");

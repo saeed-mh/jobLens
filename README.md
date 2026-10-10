@@ -77,3 +77,7 @@ npm run build
 4. Open a LinkedIn job to see its assessment. See [verification instructions](docs/VERIFY_MATCHING.md).
 
 After updating the extension, reload it in `chrome://extensions` and refresh your LinkedIn tabs.
+
+## Privacy
+
+Read the [privacy policy](PRIVACY.md) and contact [support](https://github.com/saeed-mh/jobLens/issues) without posting private CVs or API keys. Saved resume text and the testing key are not encrypted by the extension.

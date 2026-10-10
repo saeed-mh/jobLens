@@ -1,6 +1,6 @@
 {
   "name": "job-lens",
-  "version": "0.6.11",
+  "version": "0.6.12",
   "private": true,
   "description": "A Chrome extension for resume and job compatibility.",
   "type": "module",
@@ -11,7 +11,8 @@
     "typecheck:backend": "tsc --project backend/tsconfig.json --noEmit",
     "test:backend": "node scripts/build-backend.mjs && node scripts/test-backend.mjs",
     "test": "node scripts/test.mjs && node scripts/test-analysis.mjs",
-    "test:browser": "node scripts/test-browser.mjs && node scripts/test-linkedin.mjs && node scripts/test-matching.mjs"
+    "test:browser": "node scripts/test-browser.mjs && node scripts/test-linkedin.mjs && node scripts/test-matching.mjs",
+    "icons:generate": "node scripts/generate-icons.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

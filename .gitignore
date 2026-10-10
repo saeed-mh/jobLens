@@ -3,6 +3,7 @@ node_modules/
 .browser-cache/
 .test-artifacts/
 dist/
+release/
 .env
 .env.*
 !.env.example

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Job Lens</title>
+  <rect x="16" y="16" width="96" height="96" rx="24" fill="#2457d6"/>
+  <path d="M40 36h30l12 12v43H40z" fill="#fff"/>
+  <path d="M70 36v13h12" fill="#b8ceff"/>
+  <path d="M48 53h14M48 63h12M48 73h9" stroke="#2457d6" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="77" cy="76" r="15" fill="#2457d6" stroke="#fff" stroke-width="5"/>
+  <path d="m88 87 10 10" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+</svg>
